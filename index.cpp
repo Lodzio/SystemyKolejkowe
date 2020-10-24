@@ -1,11 +1,11 @@
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
+#include <queue>
 #define M 4294967296
 #define A 134775813
 #define C 1
 //long lastX = time(NULL);
-long lastX = 10;
 
 unsigned long LCG(){
 //    return lastX = (A*lastX+C)%M;
@@ -34,16 +34,60 @@ long GaussRand(int m, int l){
             return x;
     }
 }
+int exponentialRand(int lambda){
+    double x = (LCG()%10000)/10000.0;
+    return -log(1-x)*120;
+}
 
+std::queue < int > events;
+
+int getEventOperationTime(){
+    return 60;
+}
 int main(){
     srand(time(NULL));
-    for (int i = 0; i < 100; i++){
-        std::cout << GaussRand(60, 20) << std::endl;
+    int operationWaitSum = 0;
+    int operatedEventsAmount = 0;
+
+    int operationTimeLeft = getEventOperationTime();
+    int nextEventTime = exponentialRand(120);
+
+    for (int i = 0; i < 1000000; i++){
+        int timeDiff = nextEventTime < operationTimeLeft ? nextEventTime: operationTimeLeft;
+        operationTimeLeft -= timeDiff;
+        nextEventTime -= timeDiff;
+//        std::cout << "==================" << std::endl;
+//        std::cout << operationTimeLeft << std::endl;
+//        std::cout << nextEventTime << std::endl;
+//        std::cout << timeDiff << std::endl;
+//        std::cout << events.size() << std::endl;
+
+        if (operationTimeLeft == 0){
+            if (events.empty()){
+                events.push(operationTimeLeft);
+                nextEventTime = exponentialRand(120);
+                continue;
+            }
+            operationWaitSum += events.front();
+            events.pop();
+            operatedEventsAmount++;
+            operationTimeLeft = getEventOperationTime();
+            std::queue < int > eventsCopy;
+            while (!events.empty())
+            {
+                eventsCopy.push(events.front() + operationTimeLeft);
+                events.pop();
+            }
+            events = eventsCopy;
+        } else {
+            events.push(operationTimeLeft);
+            nextEventTime = exponentialRand(120);
+        }
+//        std::cout << GaussRand(60, 20) << std::endl;
+//        std::cout << exponentialRand(120) << std::endl;
     }
-//    int maxT = 10000;
-//    int time = 0;
-//    while(maxT > time){
-//        time += 60;
-//        std::cout << time << std::endl;
-//    }
+std::cout << "final: " << std::endl;
+    std::cout << operationWaitSum << std::endl;
+    std::cout << operatedEventsAmount << std::endl;
+    std::cout << operationWaitSum/(double)operatedEventsAmount << std::endl;
 }
