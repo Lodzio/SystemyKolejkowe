@@ -74,7 +74,6 @@ void getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
     int operatedEventsAmount = 0;
     int missed = 0;
     int allCars = 0;
-
     int operationTimeLeft = 0;
     int nextEventTime = 0;
 
@@ -118,6 +117,7 @@ void getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
 
 int main(){
     auto exponentialOperationTime = []{return exponentialRand(1/60.0);};
-    getAverageQueueTime(exponentialOperationTime, 10);
+    int N = 60;
+    getAverageQueueTime(exponentialOperationTime, N);
     return 0;
 }
