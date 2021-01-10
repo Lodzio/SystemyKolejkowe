@@ -85,25 +85,31 @@ class FIFO {
         return operationTimeLeft;
     }
 
-    void moveOnTimeLine(int timeDiff){
+    int moveOnTimeLine(int timeDiff){
+
+            std::queue < int > tasksCopy;
+            while (!tasks.empty())
+            {
+                tasksCopy.push(tasks.front() + timeDiff);
+                tasks.pop();
+            }
+            tasks = tasksCopy;
+
         operationTimeLeft -= timeDiff;
-
-        if (operationTimeLeft < 0){
-            std::cout << "error in moveOnTimeLine." << std::endl;
-        }
-
+        operationTimeLeft = std::max(operationTimeLeft, 0);
         if (operationTimeLeft == 0 && tasks.size()){
-            int timeSpentInQueue = cars.front();
+            int timeSpentInQueue = tasks.front();
             operationTimeLeft = getEventOperationTime();
-            cars.pop();
+            tasks.pop();
+            return timeSpentInQueue;
         }
+        return -1;
     }
 
     void pushNewTask(int task){
         if (!hasSpaceInQueue()){
-            std::cout << "error in pushNewTask." << std::endl;
+            std::cout << "error in pushNewTask" << std::endl;
         }
-
         if (operationTimeLeft == 0){
             operationTimeLeft = getEventOperationTime();
         } else {
@@ -112,57 +118,51 @@ class FIFO {
     }
 };
 
-FIFO fifo1(1, []{return exponentialRand(2 / 1000.0);};);
-FIFO fifo2(2, []{return exponentialRand(3 / 1000.0);};);
+int calculateTimeDiff(int operationTimeLeft1, int operationTimeLeft2, int nextEventTime){
+    int result = nextEventTime;
+    result = std::min(result, operationTimeLeft1);
+    result = std::min(result, operationTimeLeft2);
+    return result == 0? nextEventTime:result;
+}
 
-void getAverageQueueTime(int N){
+void runFifo(int N){
     int* operationTimes = new int[N];
     int operatedEventsAmount = 0;
     int missed = 0;
-    int allCars = 0;
+    int allTasks = 0;
     int nextEventTime = 0;
 
+    FIFO fifo1(1, []{return exponentialRand(2 / 1000.0);});
+    FIFO fifo2(2, []{return exponentialRand(3 / 1000.0);});
+
     for (int i = 0; operatedEventsAmount < N; i++){
-        int timeDiff = nextEventTime < operationTimeLeft || !operationTimeLeft ? nextEventTime: operationTimeLeft;
-        operationTimeLeft -= timeDiff;
-        operationTimeLeft = std::max(operationTimeLeft, 0);
+        int timeDiff = calculateTimeDiff(fifo1.getOperationTimeLeft(), fifo2.getOperationTimeLeft(), nextEventTime);
         nextEventTime -= timeDiff;
-        if (operationTimeLeft == 0 && !cars.empty()){
-            operationTimes[operatedEventsAmount] = cars.front();
-            cars.pop();
-            allCars++;
-            if (operatedEventsAmount){
-                std::cout << "klienci obsłużeni: " << (allCars-missed)*100.0/allCars << "%" << std::endl;
-                std::cout << "%czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount;
-                std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "s" << std::endl;
-            }
+        int operationTime1 = fifo1.moveOnTimeLine(timeDiff);
+        int operationTime2 = fifo2.moveOnTimeLine(timeDiff);
+        if (operationTime1 != -1){
+            fifo2.pushNewTask(operationTime1);
+        }
+        if (operationTime2 != -1){
+            operationTimes[operatedEventsAmount] = operationTime2;
             operatedEventsAmount++;
-            operationTimeLeft = getEventOperationTime();
-            std::queue < int > eventsCopy;
-            while (!cars.empty())
-            {
-                eventsCopy.push(cars.front() + operationTimeLeft);
-                cars.pop();
-            }
-            cars = eventsCopy;
         }
         if (nextEventTime == 0){
-            if (cars.size() < 2){
-                if (operationTimeLeft == 0){
-                    operationTimeLeft = getEventOperationTime();
-                }
-                cars.push(operationTimeLeft);
+            allTasks++;
+            if (fifo1.hasSpaceInQueue()){
+                fifo1.pushNewTask(0);
             } else {
                 missed++;
             }
-            nextEventTime = exponentialRand(1/120.0);
+            nextEventTime = exponentialRand(1 / 1000.0);
         }
     }
-}
+    std::cout << "klienci obsłużeni: " << (allTasks-missed)*100.0/allTasks << "%" << std::endl;
+    std::cout << "%czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount << "ms";
+    std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "ms" << std::endl;}
 
 int main(){
-    auto exponentialOperationTime = []{return exponentialRand(1/60.0);};
-    int N = 60;
-    getAverageQueueTime(exponentialOperationTime, N);
+    int N = 2000;
+    runFifo(N);
     return 0;
 }
