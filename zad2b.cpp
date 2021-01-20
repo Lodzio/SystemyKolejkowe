@@ -11,6 +11,8 @@ long lastX = time(NULL);
 std::default_random_engine generator;
 std::normal_distribution<double> gaussDistribution(60.0,20.0);
 
+#include <unistd.h>
+
 unsigned long LCG(){
     lastX = (A*lastX+C)%M;
     return lastX;
@@ -71,6 +73,7 @@ class FIFO {
     std::queue < int > tasks;
     const std::function< int() > getEventOperationTime;
     int operationTimeLeft = 0; // in milis
+    int actualEventTimeSpendInQueue = 0;
 
     public:
     FIFO(int queueSize, std::function< int() > getEventOperationTime): queueSize(queueSize), getEventOperationTime(getEventOperationTime){
@@ -119,10 +122,9 @@ class FIFO {
     }
 };
 
-int calculateTimeDiff(int operationTimeLeft1, int operationTimeLeft2, int nextEventTime){
+int calculateTimeDiff(int operationTimeLeft1, int nextEventTime){
     int result = nextEventTime;
     result = std::min(result, operationTimeLeft1);
-    result = std::min(result, operationTimeLeft2);
     return result == 0? nextEventTime:result;
 }
 
@@ -133,19 +135,13 @@ void runFifo(int N){
     int allTasks = 0;
     int nextEventTime = 0;
 
-    FIFO fifo1(1, []{return exponentialRand(2 / 1000.0);});
-    FIFO fifo2(2, []{return exponentialRand(3 / 1000.0);});
-
+    FIFO fifo1(100, []{return 60;});
     for (int i = 0; operatedEventsAmount < N; i++){
-        int timeDiff = calculateTimeDiff(fifo1.getOperationTimeLeft(), fifo2.getOperationTimeLeft(), nextEventTime);
+        int timeDiff = calculateTimeDiff(fifo1.getOperationTimeLeft(), nextEventTime);
         nextEventTime -= timeDiff;
         int operationTime1 = fifo1.moveOnTimeLine(timeDiff);
-        int operationTime2 = fifo2.moveOnTimeLine(timeDiff);
         if (operationTime1 != -1){
-            fifo2.pushNewTask(operationTime1);
-        }
-        if (operationTime2 != -1){
-            operationTimes[operatedEventsAmount] = operationTime2;
+            operationTimes[operatedEventsAmount] = operationTime1;
             operatedEventsAmount++;
         }
         if (nextEventTime == 0){
@@ -155,7 +151,7 @@ void runFifo(int N){
             } else {
                 missed++;
             }
-            nextEventTime = exponentialRand(1 / 1000.0);
+            nextEventTime = exponentialRand(1 / 120.0);
         }
     }
     std::cout << "klienci obsłużeni: " << (allTasks-missed)*100.0/allTasks << "%" << std::endl;
@@ -163,7 +159,7 @@ void runFifo(int N){
     std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "ms" << std::endl;}
 
 int main(){
-    int N = 2000;
+    int N = 1000000;
     runFifo(N);
     return 0;
 }

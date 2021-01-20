@@ -12,8 +12,8 @@ std::default_random_engine generator;
 std::normal_distribution<double> gaussDistribution(60.0,20.0);
 
 unsigned long LCG(){
-    lastX = (A*lastX+C)%M;
-    return lastX;
+//    lastX = (A*lastX+C)%M;
+    return rand();
 }
 
 double laplaceRand(int m, int l){
@@ -87,6 +87,7 @@ double getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
 }
 
 int main(){
+    srand(time(NULL));
     auto constantOperationTime = []{return 60;};
     auto UOperationTime = []{return ((LCG() % 10000)/10000.0)*120;};
     auto exponentialOperationTime = []{return exponentialRand(1/60.0);};
@@ -96,13 +97,19 @@ int main(){
 
     result = getAverageQueueTime(constantOperationTime, 10000000);
     std::cout << "czas obslugi dokladnie 60s: " << result << std::endl;
-    result = getAverageQueueTime(UOperationTime, 10000000);
-    std::cout << "jest zmienną losową o rozkładzie U(0,120): " << result << std::endl;
-    result = getAverageQueueTime(exponentialOperationTime, 10000000);
-    std::cout << "jest zmienną losową o rozkładzie E(60): " << result << std::endl;
-    result = getAverageQueueTime(gaussOperationTime, 10000000);
-    std::cout << "jest zmienną losową o rozkładzie N(60,20) " << result << std::endl;
-    result = getAverageQueueTime(myGaussOperationTime, 100000);
-    std::cout << "jest zmienną losową o rozkładzie N(60,20) dla własnego generatora: " << result << std::endl;
+//    result = getAverageQueueTime(UOperationTime, 100000000);
+//    std::cout << "jest zmienną losową o rozkładzie U(0,120): " << result << std::endl;
+//    result = getAverageQueueTime(exponentialOperationTime, 100000000);
+//    std::cout << "jest zmienną losową o rozkładzie E(60): " << result << std::endl;
+//    result = getAverageQueueTime(gaussOperationTime, 100000000);
+//    std::cout << "jest zmienną losową o rozkładzie N(60,20) " << result << std::endl;
+//    result = getAverageQueueTime(myGaussOperationTime, 100000);
+//    std::cout << "jest zmienną losową o rozkładzie N(60,20) dla własnego generatora: " << result << std::endl;
+
+// 30
+// 40
+// 60
+// 33.333333
+
     return 0;
 }
