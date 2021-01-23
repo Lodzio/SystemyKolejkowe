@@ -10,6 +10,7 @@
 long lastX = time(NULL);
 std::default_random_engine generator;
 std::normal_distribution<double> gaussDistribution(60.0,20.0);
+std::exponential_distribution<double> expoDistribution(1/120.0);
 
 #include <unistd.h>
 
@@ -45,6 +46,7 @@ int gaussRand(){
     return gaussDistribution(generator);
 }
 int exponentialRand(double lambda){
+//    return expoDistribution(generator);
     double x = (LCG()%10000)/10000.0;
     return -log(1-x)/lambda;
 }
@@ -135,7 +137,7 @@ void runFifo(int N){
     int allTasks = 0;
     int nextEventTime = 0;
 
-    FIFO fifo1(100, []{return 60;});
+    FIFO fifo1(100, []{return exponentialRand(1 / 60.0);});
     for (int i = 0; operatedEventsAmount < N; i++){
         int timeDiff = calculateTimeDiff(fifo1.getOperationTimeLeft(), nextEventTime);
         nextEventTime -= timeDiff;
@@ -155,11 +157,11 @@ void runFifo(int N){
         }
     }
     std::cout << "klienci obsłużeni: " << (allTasks-missed)*100.0/allTasks << "%" << std::endl;
-    std::cout << "%czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount << "ms";
+    std::cout << "%czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/(float)operatedEventsAmount << "ms";
     std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "ms" << std::endl;}
 
 int main(){
-    int N = 1000000;
+    int N = 10000000;
     runFifo(N);
     return 0;
 }

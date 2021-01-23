@@ -12,8 +12,8 @@ std::default_random_engine generator;
 std::normal_distribution<double> gaussDistribution(60.0,20.0);
 
 unsigned long LCG(){
-//    lastX = (A*lastX+C)%M;
-    return rand();
+    lastX = (A*lastX+C)%M;
+    return lastX;
 }
 
 double laplaceRand(int m, int l){
@@ -42,22 +42,22 @@ int myGaussRand(int m, int l){
 int gaussRand(){
     return gaussDistribution(generator);
 }
-int exponentialRand(double lambda){
+double exponentialRand(double lambda){
     double x = (LCG()%10000)/10000.0;
     return -log(1-x)/lambda;
 }
 
-std::queue < int > events;
+std::queue < double > events;
 
 double getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
-    int operationWaitSum = 0;
+    double operationWaitSum = 0;
     int operatedEventsAmount = 0;
 
-    int operationTimeLeft = getEventOperationTime();
-    int nextEventTime = exponentialRand(1/120.0);
+    double operationTimeLeft = getEventOperationTime();
+    double nextEventTime = exponentialRand(1/120.0);
 
     for (int i = 0; i < N; i++){
-        int timeDiff = nextEventTime < operationTimeLeft ? nextEventTime: operationTimeLeft;
+        double timeDiff = nextEventTime < operationTimeLeft ? nextEventTime: operationTimeLeft;
         operationTimeLeft -= timeDiff;
         nextEventTime -= timeDiff;
 
@@ -71,7 +71,7 @@ double getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
             events.pop();
             operatedEventsAmount++;
             operationTimeLeft = getEventOperationTime();
-            std::queue < int > eventsCopy;
+            std::queue < double > eventsCopy;
             while (!events.empty())
             {
                 eventsCopy.push(events.front() + operationTimeLeft);
@@ -95,16 +95,16 @@ int main(){
     auto myGaussOperationTime = []{return myGaussRand(60, 20);};
     double result;
 
-    result = getAverageQueueTime(constantOperationTime, 10000000);
-    std::cout << "czas obslugi dokladnie 60s: " << result << std::endl;
-//    result = getAverageQueueTime(UOperationTime, 100000000);
+//    result = getAverageQueueTime(constantOperationTime, 10000000);
+//    std::cout << "czas obslugi dokladnie 60s: " << result << std::endl;
+//    result = getAverageQueueTime(UOperationTime, 10000000);
 //    std::cout << "jest zmienną losową o rozkładzie U(0,120): " << result << std::endl;
-//    result = getAverageQueueTime(exponentialOperationTime, 100000000);
+//    result = getAverageQueueTime(exponentialOperationTime, 10000000);
 //    std::cout << "jest zmienną losową o rozkładzie E(60): " << result << std::endl;
-//    result = getAverageQueueTime(gaussOperationTime, 100000000);
+//    result = getAverageQueueTime(gaussOperationTime, 10000000);
 //    std::cout << "jest zmienną losową o rozkładzie N(60,20) " << result << std::endl;
-//    result = getAverageQueueTime(myGaussOperationTime, 100000);
-//    std::cout << "jest zmienną losową o rozkładzie N(60,20) dla własnego generatora: " << result << std::endl;
+    result = getAverageQueueTime(myGaussOperationTime, 1000000);
+    std::cout << "jest zmienną losową o rozkładzie N(60,20) dla własnego generatora: " << result << std::endl;
 
 // 30
 // 40

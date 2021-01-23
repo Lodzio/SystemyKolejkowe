@@ -11,6 +11,17 @@ long lastX = time(NULL);
 std::default_random_engine generator;
 std::normal_distribution<double> gaussDistribution(60.0,20.0);
 
+struct Car {
+    Car(double _time, double _queueTime, int _id){
+        time = _time;
+        queueTime = _queueTime;
+        id = _id;
+    }
+    double queueTime;
+    double time;
+    int id;
+};
+
 unsigned long LCG(){
     lastX = (A*lastX+C)%M;
     return lastX;
@@ -42,24 +53,24 @@ int myGaussRand(int m, int l){
 int gaussRand(){
     return gaussDistribution(generator);
 }
-int exponentialRand(double lambda){
+double exponentialRand(double lambda){
     double x = (LCG()%10000)/10000.0;
     return -log(1-x)/lambda;
 }
 
-std::queue < int > cars;
+std::queue < Car > cars;
 
 
-int sumTime(int maxN, int operationTimes[]){
-    int result = 0;
+double sumTime(int maxN, double operationTimes[]){
+    double result = 0;
     for (int i = 0; i < maxN; i++){
         result += operationTimes[i];
     }
     return result;
 }
 
-int standardDeviation(int maxN, int operationTimes[]){
-    int result = 0;
+double standardDeviation(int maxN, double operationTimes[]){
+    double result = 0;
     const double averageTime = sumTime(maxN, operationTimes)/(double)maxN;
     for (int i = 0; i < maxN; i++){
         result += pow(operationTimes[i] - averageTime, 2);
@@ -69,55 +80,77 @@ int standardDeviation(int maxN, int operationTimes[]){
     return result;
 }
 
+void printState(int operatedEventsAmount,int allCars, int missed, double* operationTimes, double* queueTimes, int id, std::string state){
+    std::cout << "------------------------------------"<< std::endl;
+    std::cout << "samochód nr: " << id << " " << state<< std::endl;
+    std::cout << "klienci obsłużeni: " << (allCars-missed)*100.0/allCars << "%" << std::endl;
+    std::cout << "czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount;
+    std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "s" << std::endl;
+//    std::cout << "czas przebywania w kolejce: av=" << sumTime(operatedEventsAmount, queueTimes)/operatedEventsAmount;
+//    std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, queueTimes) << "s" << std::endl;
+}
+
 void getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
-    int* operationTimes = new int[N];
+    double* operationTimes = new double[N];
+    double* queueTimes = new double[N];
     int operatedEventsAmount = 0;
     int missed = 0;
     int allCars = 0;
-    int operationTimeLeft = 0;
-    int nextEventTime = 0;
+    double operationTimeLeft = 0;
+    double nextEventTime = 0;
 
     for (int i = 0; operatedEventsAmount < N; i++){
-        int timeDiff = nextEventTime < operationTimeLeft || !operationTimeLeft ? nextEventTime: operationTimeLeft;
+        double timeDiff = nextEventTime < operationTimeLeft || !operationTimeLeft ? nextEventTime: operationTimeLeft;
         operationTimeLeft -= timeDiff;
-        operationTimeLeft = std::max(operationTimeLeft, 0);
+        operationTimeLeft = std::max(operationTimeLeft, 0.0);
         nextEventTime -= timeDiff;
         if (operationTimeLeft == 0 && !cars.empty()){
-            operationTimes[operatedEventsAmount] = cars.front();
+            Car car = cars.front();
+            operationTimes[operatedEventsAmount] = car.time;
+            queueTimes[operatedEventsAmount] = car.queueTime;
             cars.pop();
-            allCars++;
-            if (operatedEventsAmount){
-                std::cout << "klienci obsłużeni: " << (allCars-missed)*100.0/allCars << "%" << std::endl;
-                std::cout << "%czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount;
-                std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "s" << std::endl;
-            }
             operatedEventsAmount++;
             operationTimeLeft = getEventOperationTime();
-            std::queue < int > eventsCopy;
+            std::queue < Car > eventsCopy;
+            bool first = true;
             while (!cars.empty())
             {
-                eventsCopy.push(cars.front() + operationTimeLeft);
+                Car car = cars.front();
+                if (first){
+                    first = false;
+                } else {
+                    car.queueTime += operationTimeLeft;
+                }
+                car.time += operationTimeLeft;
+                eventsCopy.push(car);
                 cars.pop();
             }
             cars = eventsCopy;
+//            printState(operatedEventsAmount, allCars, missed, operationTimes, car.id, "zakończył");
         }
         if (nextEventTime == 0){
-            if (cars.size() < 2){
+            allCars++;
+            if (cars.size() < 3){
+                int queueTime = operationTimeLeft;
                 if (operationTimeLeft == 0){
                     operationTimeLeft = getEventOperationTime();
                 }
-                cars.push(operationTimeLeft);
+                Car car(operationTimeLeft, queueTime, allCars);
+//                printState(operatedEventsAmount, allCars, missed, operationTimes, allCars, "wchodzi");
+                cars.push(car);
             } else {
                 missed++;
+//                printState(operatedEventsAmount, allCars, missed, operationTimes, allCars, "uciekł");
             }
             nextEventTime = exponentialRand(1/120.0);
         }
     }
+    printState(operatedEventsAmount, allCars, missed, operationTimes, queueTimes, allCars, "uciekł");
 }
 
 int main(){
     auto exponentialOperationTime = []{return exponentialRand(1/60.0);};
-    int N = 60;
+    int N = 10000000;
     getAverageQueueTime(exponentialOperationTime, N);
     return 0;
 }
