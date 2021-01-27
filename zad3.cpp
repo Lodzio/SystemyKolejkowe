@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <random>
 #include <queue>
+#include <iomanip>
 #define M 4294967296
 #define A 134775813
 #define C 1
@@ -80,10 +81,50 @@ double standardDeviation(int maxN, double operationTimes[]){
     return result;
 }
 
+void printId(int id){
+    if(id == -1){
+        std::cout << "        ";
+    } else {
+        std::cout << std::setfill(' ') <<std::setw(8) << id;
+    }
+}
+
 void printState(int operatedEventsAmount,int allCars, int missed, double* operationTimes, double* queueTimes, int id, std::string state){
+    int systemSize = 3;
+    int carsAmount = cars.size();
+    int* queueStatus = new int[systemSize];
+    std::queue < Car > eventsCopy;
+    for(int i = 0; i < systemSize; i++){
+        if(!cars.empty()){
+            Car car = cars.front();
+            queueStatus[i] = car.id;
+            eventsCopy.push(car);
+            cars.pop();
+        } else {
+            queueStatus[i] = -1;
+        }
+    }
+    cars = eventsCopy;
     std::cout << "------------------------------------"<< std::endl;
-    std::cout << "samochód nr: " << id << " " << state<< std::endl;
+    std::cout << "samochód nr: " << id << " " << state << std::endl;
     std::cout << "klienci obsłużeni: " << (allCars-missed)*100.0/allCars << "%" << std::endl;
+    std::cout << "         ******************************"<< std::endl;
+    std::cout << "status   ";
+    for (int i = 2; i >= 0; i--){
+        int id = queueStatus[i];
+        if (i == 0){
+            std::cout << "||";
+            printId(id);
+            std::cout << "||";
+        } else{
+            printId(id);
+        }
+        if (i != 0){
+            std::cout << "," ;
+        }
+    }
+    std::cout << std::endl;
+    std::cout << "         ******************************"<< std::endl;
     std::cout << "czas przebywania w systemie: av=" << sumTime(operatedEventsAmount, operationTimes)/operatedEventsAmount;
     std::cout << " ,sigm=: " << standardDeviation(operatedEventsAmount, operationTimes) << "s" << std::endl;
 //    std::cout << "czas przebywania w kolejce: av=" << sumTime(operatedEventsAmount, queueTimes)/operatedEventsAmount;
@@ -126,7 +167,7 @@ void getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
                 cars.pop();
             }
             cars = eventsCopy;
-//            printState(operatedEventsAmount, allCars, missed, operationTimes, car.id, "zakończył");
+            printState(operatedEventsAmount, allCars, missed, operationTimes, queueTimes, car.id, "zakończył");
         }
         if (nextEventTime == 0){
             allCars++;
@@ -136,11 +177,11 @@ void getAverageQueueTime(std::function< int() > getEventOperationTime, int N){
                     operationTimeLeft = getEventOperationTime();
                 }
                 Car car(operationTimeLeft, queueTime, allCars);
-//                printState(operatedEventsAmount, allCars, missed, operationTimes, allCars, "wchodzi");
                 cars.push(car);
+                printState(operatedEventsAmount, allCars, missed, operationTimes, queueTimes, allCars, "wchodzi");
             } else {
                 missed++;
-//                printState(operatedEventsAmount, allCars, missed, operationTimes, allCars, "uciekł");
+                printState(operatedEventsAmount, allCars, missed, operationTimes, queueTimes, allCars, "uciekł");
             }
             nextEventTime = exponentialRand(1/120.0);
         }
